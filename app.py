@@ -1,78 +1,65 @@
 import streamlit as st
 import random
-import numpy as np
-import matplotlib.pyplot as plt
 
-# Sample words and their positions for crossword
-words = {
-    "apple": [(0, 0, "right")],
-    "banana": [(2, 1, "down")],
-    "cherry": [(4, 2, "right")],
-    "date": [(1, 4, "down")],
-    "grape": [(3, 3, "right")]
+# Define subjects and questions
+subjects = {
+    "Science": [
+        ("The sun is a ___ of energy.", "source"),
+        ("Plants produce oxygen through ___.", "photosynthesis"),
+        ("Water boils at ___ degrees Celsius.", "100")
+    ],
+    "History": [
+        ("The first President of the United States was ___.", "George Washington"),
+        ("The Great Wall of China was built to protect against ___.", "invaders"),
+        ("World War II ended in ___.", "1945")
+    ],
+    "Math": [
+        ("The square root of 81 is ___.", "9"),
+        ("A triangle has ___ sides.", "3"),
+        ("The value of pi (π) is approximately ___.", "3.14")
+    ]
 }
 
-grid_size = 10
-crossword_grid = [[' ' for _ in range(grid_size)] for _ in range(grid_size)]
+# Initialize session state
+if 'score' not in st.session_state:
+    st.session_state.score = 0
+if 'question_index' not in st.session_state:
+    st.session_state.question_index = 0
+if 'selected_subject' not in st.session_state:
+    st.session_state.selected_subject = None
 
-# Place words in the grid
-def place_words():
-    for word, positions in words.items():
-        for x, y, direction in positions:
-            if direction == "right":
-                for i, letter in enumerate(word):
-                    crossword_grid[y][x + i] = letter
-            elif direction == "down":
-                for i, letter in enumerate(word):
-                    crossword_grid[y + i][x] = letter
+st.title("Fill in the Blank Game")
 
-place_words()
+# Ask the user to select a subject
+if st.session_state.selected_subject is None:
+    st.session_state.selected_subject = st.selectbox("Choose a subject to play:", list(subjects.keys()))
+    st.session_state.question_index = 0
+    st.session_state.score = 0
 
-# Initialize session state for tracking progress
-if 'guesses' not in st.session_state:
-    st.session_state.guesses = {}
+subject = st.session_state.selected_subject
+questions = subjects[subject]
 
-st.title("Crossword Puzzle")
-
-def draw_crossword(grid, guesses):
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.set_xticks(np.arange(grid_size+1)-0.5, minor=True)
-    ax.set_yticks(np.arange(grid_size+1)-0.5, minor=True)
-    ax.grid(which="minor", color="black", linestyle='-', linewidth=1)
-    ax.tick_params(which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
+# Display current question
+if st.session_state.question_index < len(questions):
+    question, answer = questions[st.session_state.question_index]
+    st.write(f"**Question:** {question}")
+    user_answer = st.text_input("Your answer:").strip().lower()
     
-    for y in range(grid_size):
-        for x in range(grid_size):
-            char = grid[y][x]
-            if char != ' ' and (x, y) in guesses:
-                ax.text(x, grid_size-1-y, char, ha='center', va='center', fontsize=12, fontweight='bold')
-            else:
-                ax.text(x, grid_size-1-y, "_", ha='center', va='center', fontsize=12, fontweight='bold')
-    
-    st.pyplot(fig)
-
-draw_crossword(crossword_grid, st.session_state.guesses)
-
-# User input
-user_word = st.text_input("Enter a word:").strip().lower()
-
-# Check the guess
-if user_word:
-    if user_word in words:
-        st.success(f"🎉 Correct! '{user_word}' is in the crossword!")
-        for x, y, direction in words[user_word]:
-            if direction == "right":
-                for i, letter in enumerate(user_word):
-                    st.session_state.guesses[(x + i, y)] = letter
-            elif direction == "down":
-                for i, letter in enumerate(user_word):
-                    st.session_state.guesses[(x, y + i)] = letter
-    else:
-        st.error("❌ Incorrect! Try another word.")
-
-# Button to restart the game
-if st.button("Restart Puzzle"):
-    st.session_state.guesses = {}
-    st.experimental_rerun()
+    if user_answer:
+        if user_answer == answer.lower():
+            st.success("🎉 Correct! You earned 100 points.")
+            st.session_state.score += 100
+        else:
+            st.error("❌ Incorrect. Try the next question.")
+        
+        st.session_state.question_index += 1
+        st.experimental_rerun()
+else:
+    st.write(f"Game over! Your final score: {st.session_state.score}")
+    if st.button("Play Again"):
+        st.session_state.selected_subject = None
+        st.session_state.question_index = 0
+        st.session_state.score = 0
+        st.experimental_rerun()
 
 
