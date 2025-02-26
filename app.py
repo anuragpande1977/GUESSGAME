@@ -1,22 +1,24 @@
 import streamlit as st
 import random
 
-# Predefined set of questions and possible answers
+# Predefined set of personality-based questions and possible answers
 questions = [
-    ("What is the person's profession?", ["scientist", "actor", "musician", "athlete", "politician"]),
-    ("Is the person alive?", ["yes", "no"]),
-    ("What is the person's nationality?", ["american", "british", "french", "indian", "japanese"]),
-    ("What field is the person famous in?", ["technology", "sports", "movies", "music", "literature"]),
-    ("Did the person win any major awards?", ["yes", "no"])
+    ("Do you prefer the morning or night?", ["morning", "night"]),
+    ("Are you more introverted or extroverted?", ["introverted", "extroverted"]),
+    ("Do you enjoy creative or analytical tasks more?", ["creative", "analytical"]),
+    ("Would you rather spend time alone or in a group?", ["alone", "group"]),
+    ("Do you prefer reading books or watching movies?", ["books", "movies"]),
+    ("Are you more adventurous or cautious?", ["adventurous", "cautious"]),
+    ("Do you like working with technology or people more?", ["technology", "people"]),
+    ("Would you rather live in a big city or the countryside?", ["big city", "countryside"])
 ]
 
-# Sample dataset of famous personalities (in a real scenario, expand this dataset)
-personalities = {
-    ("scientist", "no", "german", "technology", "yes"): "Albert Einstein",
-    ("actor", "yes", "american", "movies", "yes"): "Leonardo DiCaprio",
-    ("musician", "no", "british", "music", "yes"): "Freddie Mercury",
-    ("athlete", "yes", "american", "sports", "yes"): "Serena Williams",
-    ("politician", "no", "indian", "politics", "yes"): "Mahatma Gandhi"
+# Sample dataset mapping answer combinations to possible names
+name_predictions = {
+    ("morning", "introverted", "creative", "alone", "books", "cautious", "technology", "big city"): "Alice",
+    ("night", "extroverted", "analytical", "group", "movies", "adventurous", "people", "big city"): "Michael",
+    ("morning", "extroverted", "creative", "group", "books", "adventurous", "people", "countryside"): "Sophia",
+    ("night", "introverted", "analytical", "alone", "movies", "cautious", "technology", "countryside"): "David"
 }
 
 # Initialize session state
@@ -25,7 +27,7 @@ if 'answers' not in st.session_state:
 if 'question_index' not in st.session_state:
     st.session_state.question_index = 0
 
-st.title("AI-Powered Personality Guesser")
+st.title("AI-Powered Name Guesser")
 
 # Ask questions one by one
 if st.session_state.question_index < len(questions):
@@ -37,9 +39,9 @@ if st.session_state.question_index < len(questions):
         st.session_state.question_index += 1
         st.experimental_rerun()
 else:
-    # Try to guess the person
-    guessed_person = personalities.get(tuple(st.session_state.answers), "I couldn't determine the person!")
-    st.write(f"I think the person is: **{guessed_person}**")
+    # Try to guess the user's name
+    guessed_name = name_predictions.get(tuple(st.session_state.answers), "I couldn't determine your name! But you seem unique!")
+    st.write(f"Based on your answers, I think your name could be: **{guessed_name}**")
     
     if st.button("Play Again"):
         st.session_state.answers = []
