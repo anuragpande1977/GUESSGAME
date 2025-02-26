@@ -4,20 +4,28 @@ import requests
 
 # Function to get a random word and definition
 def get_random_word():
-    response = requests.get("https://random-word-api.herokuapp.com/word?number=1")
-    if response.status_code == 200:
+    try:
+        response = requests.get("https://random-word-api.herokuapp.com/word?number=1")
+        response.raise_for_status()
         word = response.json()[0]
+        
         definition_response = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
+        definition = "Definition not available."
+        
         if definition_response.status_code == 200:
-            definition = definition_response.json()[0]['meanings'][0]['definitions'][0]['definition']
-        else:
-            definition = "Definition not available."
+            definition_data = definition_response.json()
+            if isinstance(definition_data, list) and definition_data:
+                meanings = definition_data[0].get('meanings', [])
+                if meanings:
+                    definitions = meanings[0].get('definitions', [])
+                    if definitions:
+                        definition = definitions[0].get('definition', "Definition not available.")
         return word, definition
-    else:
+    except requests.exceptions.RequestException:
         return "streamlit", "A web app framework for Python."
 
 # Initialize session state if not already done
-if 'word' not in st.session_state:
+if 'word' not in st.session_state or 'attempts' not in st.session_state:
     st.session_state.word, st.session_state.hint = get_random_word()
     st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
     st.session_state.attempts = 0
@@ -40,7 +48,7 @@ if user_guess:
             st.session_state.word, st.session_state.hint = get_random_word()
             st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
             st.session_state.attempts = 0
-            st.experimental_rerun()
+            st.rerun()
     else:
         st.session_state.attempts += 1
         st.error(f"❌ Wrong guess! Attempt {st.session_state.attempts}/3")
@@ -51,4 +59,5 @@ if user_guess:
                 st.session_state.word, st.session_state.hint = get_random_word()
                 st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
                 st.session_state.attempts = 0
-                st.experimental_rerun()
+                st.rerun()
+
