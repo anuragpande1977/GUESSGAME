@@ -1,63 +1,68 @@
 import streamlit as st
 import random
-import requests
 
-# Function to get a random word and definition
-def get_random_word():
-    try:
-        response = requests.get("https://random-word-api.herokuapp.com/word?number=1")
-        response.raise_for_status()
-        word = response.json()[0]
-        
-        definition_response = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
-        definition = "Definition not available."
-        
-        if definition_response.status_code == 200:
-            definition_data = definition_response.json()
-            if isinstance(definition_data, list) and definition_data:
-                meanings = definition_data[0].get('meanings', [])
-                if meanings:
-                    definitions = meanings[0].get('definitions', [])
-                    if definitions:
-                        definition = definitions[0].get('definition', "Definition not available.")
-        return word, definition
-    except requests.exceptions.RequestException:
-        return "streamlit", "A web app framework for Python."
+# Sample words and their positions for crossword
+words = {
+    "apple": [(0, 0, "right")],
+    "banana": [(2, 1, "down")],
+    "cherry": [(4, 2, "right")],
+    "date": [(1, 4, "down")],
+    "grape": [(3, 3, "right")]
+}
 
-# Initialize session state if not already done
-if 'word' not in st.session_state or 'attempts' not in st.session_state:
-    st.session_state.word, st.session_state.hint = get_random_word()
-    st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
-    st.session_state.attempts = 0
+grid_size = 10
+crossword_grid = [[' ' for _ in range(grid_size)] for _ in range(grid_size)]
 
-# Streamlit app title
-st.title("Word Guessing Game")
+# Place words in the grid
+def place_words():
+    for word, positions in words.items():
+        for x, y, direction in positions:
+            if direction == "right":
+                for i, letter in enumerate(word):
+                    crossword_grid[y][x + i] = letter
+            elif direction == "down":
+                for i, letter in enumerate(word):
+                    crossword_grid[y + i][x] = letter
 
-# Display hint and shuffled word
-st.write(f"**Hint:** {st.session_state.hint}")
-st.write(f"**Scrambled Word:** {st.session_state.shuffled_word}")
+place_words()
+
+# Initialize session state for tracking progress
+if 'guesses' not in st.session_state:
+    st.session_state.guesses = {}
+
+st.title("Crossword Puzzle")
+
+# Display crossword grid with masked letters
+for y in range(grid_size):
+    row_display = " "
+    for x in range(grid_size):
+        char = crossword_grid[y][x]
+        if char == ' ' or (x, y) in st.session_state.guesses:
+            row_display += f"{char} "
+        else:
+            row_display += "_ "
+    st.write(row_display)
 
 # User input
-user_guess = st.text_input("Enter your guess:")
+user_word = st.text_input("Enter a word:").strip().lower()
 
 # Check the guess
-if user_guess:
-    if user_guess.lower() == st.session_state.word:
-        st.success("🎉 Correct! You guessed the word!")
-        if st.button("Play Again"):
-            st.session_state.word, st.session_state.hint = get_random_word()
-            st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
-            st.session_state.attempts = 0
-            st.rerun()
+if user_word:
+    if user_word in words:
+        st.success(f"🎉 Correct! '{user_word}' is in the crossword!")
+        for x, y, direction in words[user_word]:
+            if direction == "right":
+                for i, letter in enumerate(user_word):
+                    st.session_state.guesses[(x + i, y)] = letter
+            elif direction == "down":
+                for i, letter in enumerate(user_word):
+                    st.session_state.guesses[(x, y + i)] = letter
     else:
-        st.session_state.attempts += 1
-        st.error(f"❌ Wrong guess! Attempt {st.session_state.attempts}/3")
-        
-        if st.session_state.attempts >= 3:
-            st.warning(f"The correct word was: {st.session_state.word}")
-            if st.button("Try Another Word"):
-                st.session_state.word, st.session_state.hint = get_random_word()
-                st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
-                st.session_state.attempts = 0
-                st.rerun()
+        st.error("❌ Incorrect! Try another word.")
+
+# Button to restart the game
+if st.button("Restart Puzzle"):
+    st.session_state.guesses = {}
+    st.experimental_rerun()
+
 
