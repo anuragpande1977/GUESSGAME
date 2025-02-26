@@ -1,65 +1,64 @@
 import streamlit as st
 import random
 
-# Define subjects and questions
+# Define subjects and word banks for random sentence generation
 subjects = {
-    "Science": [
-        ("The sun is a ___ of energy.", "source"),
-        ("Plants produce oxygen through ___.", "photosynthesis"),
-        ("Water boils at ___ degrees Celsius.", "100")
-    ],
-    "History": [
-        ("The first President of the United States was ___.", "George Washington"),
-        ("The Great Wall of China was built to protect against ___.", "invaders"),
-        ("World War II ended in ___.", "1945")
-    ],
-    "Math": [
-        ("The square root of 81 is ___.", "9"),
-        ("A triangle has ___ sides.", "3"),
-        ("The value of pi (π) is approximately ___.", "3.14")
-    ]
+    "Science": ["energy", "photosynthesis", "gravity", "atom", "molecule"],
+    "History": ["revolution", "empire", "colonization", "war", "president"],
+    "Math": ["equation", "algebra", "geometry", "calculus", "fraction"]
 }
+
+# Function to generate a random sentence with a missing word
+def generate_sentence(subject):
+    word = random.choice(subjects[subject])
+    sentence_templates = [
+        f"The concept of {word} is fundamental in {subject}.",
+        f"One of the most important discoveries in {subject} involves {word}.",
+        f"Students often study {word} when learning about {subject}.",
+        f"The principle of {word} has shaped modern {subject} theories.",
+        f"Understanding {word} is crucial for grasping {subject} concepts."
+    ]
+    sentence = random.choice(sentence_templates)
+    masked_sentence = sentence.replace(word, "___")
+    return masked_sentence, word
 
 # Initialize session state
 if 'score' not in st.session_state:
     st.session_state.score = 0
-if 'question_index' not in st.session_state:
-    st.session_state.question_index = 0
 if 'selected_subject' not in st.session_state:
     st.session_state.selected_subject = None
+if 'current_sentence' not in st.session_state:
+    st.session_state.current_sentence, st.session_state.current_answer = "", ""
 
 st.title("Fill in the Blank Game")
 
 # Ask the user to select a subject
 if st.session_state.selected_subject is None:
-    st.session_state.selected_subject = st.selectbox("Choose a subject to play:", list(subjects.keys()))
-    st.session_state.question_index = 0
+    st.session_state.selected_subject = st.selectbox("Choose a subject to play:", list(subjects.keys()), key="subject")
+    st.session_state.current_sentence, st.session_state.current_answer = generate_sentence(st.session_state.selected_subject)
     st.session_state.score = 0
 
-subject = st.session_state.selected_subject
-questions = subjects[subject]
+st.write(f"**Question:** {st.session_state.current_sentence}")
+user_answer = st.text_input("Your answer:", key="answer").strip().lower()
 
-# Display current question
-if st.session_state.question_index < len(questions):
-    question, answer = questions[st.session_state.question_index]
-    st.write(f"**Question:** {question}")
-    user_answer = st.text_input("Your answer:").strip().lower()
-    
+if st.button("Submit"):
     if user_answer:
-        if user_answer == answer.lower():
+        if user_answer == st.session_state.current_answer.lower():
             st.success("🎉 Correct! You earned 100 points.")
             st.session_state.score += 100
         else:
-            st.error("❌ Incorrect. Try the next question.")
+            st.error(f"❌ Incorrect! The correct answer was: {st.session_state.current_answer}")
         
-        st.session_state.question_index += 1
+        # Generate a new question
+        st.session_state.current_sentence, st.session_state.current_answer = generate_sentence(st.session_state.selected_subject)
         st.experimental_rerun()
-else:
-    st.write(f"Game over! Your final score: {st.session_state.score}")
-    if st.button("Play Again"):
-        st.session_state.selected_subject = None
-        st.session_state.question_index = 0
-        st.session_state.score = 0
-        st.experimental_rerun()
+
+st.write(f"Current Score: {st.session_state.score}")
+
+if st.button("Play Again"):
+    st.session_state.selected_subject = None
+    st.session_state.current_sentence, st.session_state.current_answer = "", ""
+    st.session_state.score = 0
+    st.experimental_rerun()
 
 
