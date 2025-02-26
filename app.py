@@ -1,5 +1,7 @@
 import streamlit as st
 import random
+import numpy as np
+import matplotlib.pyplot as plt
 
 # Sample words and their positions for crossword
 words = {
@@ -32,16 +34,24 @@ if 'guesses' not in st.session_state:
 
 st.title("Crossword Puzzle")
 
-# Display crossword grid with masked letters
-for y in range(grid_size):
-    row_display = " "
-    for x in range(grid_size):
-        char = crossword_grid[y][x]
-        if char == ' ' or (x, y) in st.session_state.guesses:
-            row_display += f"{char} "
-        else:
-            row_display += "_ "
-    st.write(row_display)
+def draw_crossword(grid, guesses):
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.set_xticks(np.arange(grid_size+1)-0.5, minor=True)
+    ax.set_yticks(np.arange(grid_size+1)-0.5, minor=True)
+    ax.grid(which="minor", color="black", linestyle='-', linewidth=1)
+    ax.tick_params(which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
+    
+    for y in range(grid_size):
+        for x in range(grid_size):
+            char = grid[y][x]
+            if char != ' ' and (x, y) in guesses:
+                ax.text(x, grid_size-1-y, char, ha='center', va='center', fontsize=12, fontweight='bold')
+            else:
+                ax.text(x, grid_size-1-y, "_", ha='center', va='center', fontsize=12, fontweight='bold')
+    
+    st.pyplot(fig)
+
+draw_crossword(crossword_grid, st.session_state.guesses)
 
 # User input
 user_word = st.text_input("Enter a word:").strip().lower()
