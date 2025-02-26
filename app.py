@@ -1,51 +1,61 @@
 import streamlit as st
+import openai
 import random
 
-# Predefined set of personality-based questions and possible answers
-questions = [
-    ("Do you prefer the morning or night?", ["morning", "night"]),
-    ("Are you more introverted or extroverted?", ["introverted", "extroverted"]),
-    ("Do you enjoy creative or analytical tasks more?", ["creative", "analytical"]),
-    ("Would you rather spend time alone or in a group?", ["alone", "group"]),
-    ("Do you prefer reading books or watching movies?", ["books", "movies"]),
-    ("Are you more adventurous or cautious?", ["adventurous", "cautious"]),
-    ("Do you like working with technology or people more?", ["technology", "people"]),
-    ("Would you rather live in a big city or the countryside?", ["big city", "countryside"])
-]
-
-# Sample dataset mapping answer combinations to possible names
-name_predictions = {
-    ("morning", "introverted", "creative", "alone", "books", "cautious", "technology", "big city"): "Alice",
-    ("night", "extroverted", "analytical", "group", "movies", "adventurous", "people", "big city"): "Michael",
-    ("morning", "extroverted", "creative", "group", "books", "adventurous", "people", "countryside"): "Sophia",
-    ("night", "introverted", "analytical", "alone", "movies", "cautious", "technology", "countryside"): "David"
-}
+# Set OpenAI API Key (replace with your own API key)
+OPENAI_API_KEY = "your-api-key"
+openai.api_key = OPENAI_API_KEY
 
 # Initialize session state
-if 'answers' not in st.session_state:
-    st.session_state.answers = []
-if 'question_index' not in st.session_state:
-    st.session_state.question_index = 0
+if "game_state" not in st.session_state:
+    st.session_state.game_state = "start"
+    st.session_state.story = ""
+    st.session_state.inventory = []
+    st.session_state.character = ""
 
-st.title("AI-Powered Name Guesser")
+# Function to generate AI response
+def generate_story(prompt):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "system", "content": "You are an AI Dungeon Master guiding a player through an adventure. Respond concisely."},
+                  {"role": "user", "content": prompt}]
+    )
+    return response["choices"][0]["message"]["content"].strip()
 
-# Ask questions one by one
-if st.session_state.question_index < len(questions):
-    question, options = questions[st.session_state.question_index]
-    answer = st.radio(question, options, key=f"q{st.session_state.question_index}")
-    
-    if st.button("Next"):
-        st.session_state.answers.append(answer)
-        st.session_state.question_index += 1
+# Game Introduction
+st.title("🕵️ AI Dungeon: The Forgotten Realm")
+st.write("Welcome, adventurer! Choose your path and shape your own story.")
+
+# Character Selection
+if st.session_state.game_state == "start":
+    st.write("### Choose your character:")
+    character = st.radio("", ["Warrior 🗡️", "Mage 🔥", "Rogue 🏹"])
+    if st.button("Start Adventure"):
+        st.session_state.character = character
+        intro_prompt = f"You are a {character.lower()} in a mysterious dungeon. Describe the scene and what happens next."
+        st.session_state.story = generate_story(intro_prompt)
+        st.session_state.game_state = "playing"
         st.experimental_rerun()
-else:
-    # Try to guess the user's name
-    guessed_name = name_predictions.get(tuple(st.session_state.answers), "I couldn't determine your name! But you seem unique!")
-    st.write(f"Based on your answers, I think your name could be: **{guessed_name}**")
-    
-    if st.button("Play Again"):
-        st.session_state.answers = []
-        st.session_state.question_index = 0
+
+# Game Loop
+elif st.session_state.game_state == "playing":
+    st.write("### Your Adventure So Far:")
+    st.write(st.session_state.story)
+
+    # User Input
+    user_action = st.text_input("What will you do next? (e.g., 'Search the chest', 'Attack the monster')")
+    if st.button("Submit Action") and user_action:
+        action_prompt = f"The player decides to {user_action}. Continue the story and describe the outcome."
+        new_story = generate_story(action_prompt)
+        st.session_state.story += "\n\n" + new_story
         st.experimental_rerun()
+
+# Restart Option
+if st.session_state.game_state != "start" and st.button("Restart Game"):
+    st.session_state.game_state = "start"
+    st.session_state.story = ""
+    st.session_state.inventory = []
+    st.session_state.character = ""
+    st.experimental_rerun()
 
 
