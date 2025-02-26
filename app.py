@@ -1,61 +1,74 @@
 import streamlit as st
-import openai
-import random
+import chess
+import chess.svg
+import chess.engine
+import os
+import base64
 
-# Set OpenAI API Key (replace with your own API key)
-OPENAI_API_KEY = "your-api-key"
-openai.api_key = OPENAI_API_KEY
+# Load Stockfish engine (Update this path based on your OS)
+STOCKFISH_PATH = "/usr/local/bin/stockfish"  # Update this path if needed
+if not os.path.exists(STOCKFISH_PATH):
+    st.error("Stockfish engine not found! Install and update the path.")
+    st.stop()
 
-# Initialize session state
-if "game_state" not in st.session_state:
-    st.session_state.game_state = "start"
-    st.session_state.story = ""
-    st.session_state.inventory = []
-    st.session_state.character = ""
+# Initialize chess board
+if "board" not in st.session_state:
+    st.session_state.board = chess.Board()
+    st.session_state.engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+    st.session_state.game_over = False
 
-# Function to generate AI response
-def generate_story(prompt):
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "system", "content": "You are an AI Dungeon Master guiding a player through an adventure. Respond concisely."},
-                  {"role": "user", "content": prompt}]
-    )
-    return response["choices"][0]["message"]["content"].strip()
+# Convert board to an SVG image
+def render_board(board):
+    board_svg = chess.svg.board(board=board)
+    encoded_svg = base64.b64encode(board_svg.encode("utf-8")).decode("utf-8")
+    return f'<img src="data:image/svg+xml;base64,{encoded_svg}" width="400"/>'
 
-# Game Introduction
-st.title("🕵️ AI Dungeon: The Forgotten Realm")
-st.write("Welcome, adventurer! Choose your path and shape your own story.")
+# Function to handle player move
+def player_move(move):
+    if move in [m.uci() for m in st.session_state.board.legal_moves]:
+        st.session_state.board.push_uci(move)
+        return True
+    return False
 
-# Character Selection
-if st.session_state.game_state == "start":
-    st.write("### Choose your character:")
-    character = st.radio("", ["Warrior 🗡️", "Mage 🔥", "Rogue 🏹"])
-    if st.button("Start Adventure"):
-        st.session_state.character = character
-        intro_prompt = f"You are a {character.lower()} in a mysterious dungeon. Describe the scene and what happens next."
-        st.session_state.story = generate_story(intro_prompt)
-        st.session_state.game_state = "playing"
-        st.experimental_rerun()
+# Function for AI move
+def ai_move():
+    if not st.session_state.board.is_game_over():
+        result = st.session_state.engine.play(st.session_state.board, chess.engine.Limit(time=1.0))
+        st.session_state.board.push(result.move)
 
-# Game Loop
-elif st.session_state.game_state == "playing":
-    st.write("### Your Adventure So Far:")
-    st.write(st.session_state.story)
+# Streamlit UI
+st.title("♟️ AI Chess Game on Streamlit")
 
-    # User Input
-    user_action = st.text_input("What will you do next? (e.g., 'Search the chest', 'Attack the monster')")
-    if st.button("Submit Action") and user_action:
-        action_prompt = f"The player decides to {user_action}. Continue the story and describe the outcome."
-        new_story = generate_story(action_prompt)
-        st.session_state.story += "\n\n" + new_story
-        st.experimental_rerun()
+# Display the chess board
+st.markdown(render_board(st.session_state.board), unsafe_allow_html=True)
 
-# Restart Option
-if st.session_state.game_state != "start" and st.button("Restart Game"):
-    st.session_state.game_state = "start"
-    st.session_state.story = ""
-    st.session_state.inventory = []
-    st.session_state.character = ""
-    st.experimental_rerun()
+# Move input from player
+player_input = st.text_input("Enter your move (e.g., e2e4):", key="move_input")
+if st.button("Submit Move"):
+    if player_move(player_input):
+        if not st.session_state.board.is_game_over():
+            ai_move()
+    else:
+        st.warning("Invalid move! Try again.")
+
+# Display game status
+if st.session_state.board.is_checkmate():
+    st.session_state.game_over = True
+    st.success("Checkmate! The game is over.")
+elif st.session_state.board.is_stalemate():
+    st.session_state.game_over = True
+    st.warning("Stalemate! The game is drawn.")
+elif st.session_state.board.is_insufficient_material():
+    st.session_state.game_over = True
+    st.info("Draw! Insufficient material.")
+
+# Reset game button
+if st.button("Restart Game"):
+    st.session_state.board = chess.Board()
+    st.session_state.game_over = False
+
+# Close Stockfish engine
+st.session_state.engine.close()
+
 
 
