@@ -16,23 +16,39 @@ def get_random_word():
     else:
         return "streamlit", "A web app framework for Python."
 
-# Select a random word
-word, hint = get_random_word()
-shuffled_word = ''.join(random.sample(word, len(word)))
+# Initialize session state if not already done
+if 'word' not in st.session_state:
+    st.session_state.word, st.session_state.hint = get_random_word()
+    st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
+    st.session_state.attempts = 0
 
 # Streamlit app title
 st.title("Word Guessing Game")
 
 # Display hint and shuffled word
-st.write(f"**Hint:** {hint}")
-st.write(f"**Scrambled Word:** {shuffled_word}")
+st.write(f"**Hint:** {st.session_state.hint}")
+st.write(f"**Scrambled Word:** {st.session_state.shuffled_word}")
 
 # User input
 user_guess = st.text_input("Enter your guess:")
 
 # Check the guess
 if user_guess:
-    if user_guess.lower() == word:
+    if user_guess.lower() == st.session_state.word:
         st.success("🎉 Correct! You guessed the word!")
+        if st.button("Play Again"):
+            st.session_state.word, st.session_state.hint = get_random_word()
+            st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
+            st.session_state.attempts = 0
+            st.experimental_rerun()
     else:
-        st.error("❌ Wrong guess! Try again.")
+        st.session_state.attempts += 1
+        st.error(f"❌ Wrong guess! Attempt {st.session_state.attempts}/3")
+        
+        if st.session_state.attempts >= 3:
+            st.warning(f"The correct word was: {st.session_state.word}")
+            if st.button("Try Another Word"):
+                st.session_state.word, st.session_state.hint = get_random_word()
+                st.session_state.shuffled_word = ''.join(random.sample(st.session_state.word, len(st.session_state.word)))
+                st.session_state.attempts = 0
+                st.experimental_rerun()
